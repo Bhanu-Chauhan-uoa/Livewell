@@ -36,6 +36,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [message, setMessage] = useState('');
   const [setupStep, setSetupStep] = useState<SetupStep>('email');
 
+  // Prefer EXPO env var; falls back to placeholder string for dev
+  const subscriptionKey =
+    (process.env.EXPO_PUBLIC_APIM_KEY as string) || '8d7144a492ab484b982f92b12525ec6f';
+
   const getFontSize = (baseSize: number): number => {
     const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
     return baseSize * multiplier;
@@ -46,7 +50,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      
+
       return {
         hasHardware,
         isEnrolled,
@@ -63,7 +67,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const handleBiometricLogin = async () => {
     setIsLoading(true);
     setMessage('');
-    
+
     if (!email || !email.includes('@')) {
       setMessage('Please enter a valid email address first.');
       setIsLoading(false);
@@ -72,7 +76,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       const biometricAuth = await checkBiometricSupport();
-      
+
       if (!biometricAuth.hasHardware) {
         Alert.alert(
           'Not Available',
@@ -101,7 +105,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       if (authResult.success) {
         setMessage('Perfect! Welcome back to LiveWell!');
-        
+
         const userData = {
           email: email,
           name: name,
@@ -112,7 +116,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           completedGoals: 3,
           streakDays: 12,
         };
-        
+
         setTimeout(() => {
           setIsLoading(false);
           onLoginSuccess(userData);
@@ -124,6 +128,52 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     } catch (error) {
       console.error('Biometric auth error:', error);
       setMessage('Something went wrong. Please try again or call 1800 LIVEWELL for help.');
+      setIsLoading(false);
+    }
+  };
+
+  // NEW: Passkey login handler
+  const handlePasskeyLogin = async () => {
+    setIsLoading(true);
+    setMessage('');
+
+    if (!email || !email.includes('@') || !passkey) {
+      setMessage('Please enter both email and passkey.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        'https://mws-apim-test-01.azure-api.net/v1/auth/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
+          },
+          body: JSON.stringify({
+            identifier: email,
+            passkey: passkey,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage('Welcome back!');
+        setTimeout(() => {
+          setIsLoading(false);
+          onLoginSuccess(data);
+        }, 1000);
+      } else {
+        const errorText = await response.text();
+        setMessage(`Login failed: ${errorText}`);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setMessage('Something went wrong. Please try again.');
       setIsLoading(false);
     }
   };
@@ -160,26 +210,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
 
     try {
-      const response = await fetch(
-        'https://mws-apim-test-01.azure-api.net/v1/auth/egister',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
-          },
-          body: JSON.stringify({
-            fullName: name,
-            emailAddress: email,
-            phoneNumber: phoneNumber,
-            passkey: passkey,
-          }),
-        }
-      );
+      // FIXED: correct endpoint path
+      const response = await fetch('https://mws-apim-test-01.azure-api.net/v1/RegisterUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Ocp-Apim-Subscription-Key': subscriptionKey,
+        },
+        body: JSON.stringify({
+          fullName: name,
+          emailAddress: email,
+          phoneNumber: phoneNumber,
+          passkey: passkey,
+        }),
+      });
 
       if (response.ok) {
-        const data = await response.json();
-        setMessage('Account created successfully! Now let\'s set up secure sign-in.');
+        await response.json();
+        setMessage("Account created successfully! Now let's set up secure sign-in.");
         setCurrentStep('setup-biometric');
         setSetupStep('verify');
       } else {
@@ -194,14 +242,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
-
   const handleSetupBiometric = async () => {
     setIsLoading(true);
     setMessage('');
-    
+
     try {
       const biometricAuth = await checkBiometricSupport();
-      
+
       if (!biometricAuth.hasHardware || !biometricAuth.isEnrolled) {
         Alert.alert(
           'Setup Required',
@@ -213,7 +260,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       }
 
       const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Set up secure sign-in for LiveWell - This will allow you to sign in quickly and securely',
+        promptMessage:
+          'Set up secure sign-in for LiveWell - This will allow you to sign in quickly and securely',
         fallbackLabel: 'Use device passcode',
         cancelLabel: 'Cancel',
       });
@@ -221,7 +269,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       if (authResult.success) {
         setSetupStep('success');
         setMessage('Excellent! Your secure sign-in is now ready.');
-        
+
         setTimeout(() => {
           setIsLoading(false);
         }, 1000);
@@ -249,7 +297,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       streakDays: 0,
       isNewUser: true,
     };
-    
+
     onLoginSuccess(userData);
   };
 
@@ -389,6 +437,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     faceContainer: {
       backgroundColor: '#eff6ff',
       borderColor: '#3b82f6',
+    },
+    // NEW: passkey container/button styles
+    passkeyContainer: {
+      backgroundColor: '#fffbe6',
+      borderColor: '#facc15',
+    },
+    passkeyButton: {
+      backgroundColor: '#facc15',
     },
     biometricIcon: {
       borderRadius: 40,
@@ -569,23 +625,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const FontSizeButtons = () => {
     const fontSizes: FontSize[] = ['normal', 'large', 'extra-large'];
-    
+
     return (
       <View style={styles.fontSizeContainer}>
         <Text style={styles.fontSizeLabel}>Text Size:</Text>
         {fontSizes.map((size, index) => (
           <TouchableOpacity
             key={size}
-            style={[
-              styles.fontSizeButton,
-              fontSize === size && styles.fontSizeButtonActive,
-            ]}
+            style={[styles.fontSizeButton, fontSize === size && styles.fontSizeButtonActive]}
             onPress={() => setFontSize(size)}
           >
             <Text
               style={[
                 styles.fontSizeButtonText,
-                { fontSize: 16 + (index * 2) },
+                { fontSize: 16 + index * 2 },
                 fontSize === size && styles.fontSizeButtonTextActive,
               ]}
             >
@@ -599,18 +652,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const MessageDisplay = () => {
     if (!message) return null;
-    
+
     const isError = message.includes('error') || message.includes('Please') || message.includes('failed');
-    
+
     return (
-      <View style={[
-        styles.messageContainer,
-        isError ? styles.errorMessage : styles.successMessage,
-      ]}>
-        <Text style={[
-          styles.messageText,
-          isError ? styles.errorMessageText : styles.successMessageText,
-        ]}>
+      <View style={[styles.messageContainer, isError ? styles.errorMessage : styles.successMessage]}>
+        <Text style={[styles.messageText, isError ? styles.errorMessageText : styles.successMessageText]}>
           {message}
         </Text>
       </View>
@@ -619,11 +666,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView 
+      <KeyboardAvoidingView style={styles.keyboardContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -632,11 +676,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleContainer}>
-                <Image
-                  source={require('@/assets/images/Logo.png')}
-                  style={styles.heartIcon}
-                  resizeMode="contain"
-                />
+                <Image source={require('@/assets/images/Logo.png')} style={styles.heartIcon} resizeMode="contain" />
                 <Text style={styles.title}>LiveWell</Text>
               </View>
               <Text style={styles.subtitle}>Secure & Simple Sign In</Text>
@@ -650,7 +690,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <View>
                 <Text style={styles.sectionTitle}>Welcome Back!</Text>
                 <Text style={styles.description}>
-                  Sign in safely using your fingerprint or face recognition - no passwords to remember!
+                  Sign in safely using your passkey or biometrics — no passwords to remember!
                 </Text>
 
                 <View style={styles.inputContainer}>
@@ -667,15 +707,50 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   />
                 </View>
 
+                {/* NEW: Passkey Login */}
+                {/* Passkey Login */}
+  <View style={[styles.biometricContainer, { backgroundColor: '#fffbe6', borderColor: '#facc15' }]}>
+    <View style={[styles.biometricIcon, { backgroundColor: '#facc15' }]}>
+      <Text style={styles.iconEmoji}>🔑</Text>
+    </View>
+    <Text style={styles.biometricTitle}>Use Your Passkey</Text>
+    <Text style={styles.biometricDescription}>
+      Enter your email & passkey for secure access
+    </Text>
+
+    <TextInput
+      style={styles.textInput}
+      value={passkey}
+      onChangeText={setPasskey}
+      placeholder="Enter your passkey"
+      secureTextEntry={true}
+      autoCapitalize="none"
+      autoCorrect={false}
+    />
+
+    <TouchableOpacity
+      style={[
+        styles.primaryButton,
+        { backgroundColor: '#facc15' },
+        isLoading && styles.disabledButton,
+      ]}
+      onPress={handlePasskeyLogin}
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <ActivityIndicator color="#ffffff" size="small" />
+      ) : (
+        <Text style={styles.buttonText}>Sign In with Passkey</Text>
+      )}
+    </TouchableOpacity>
+  </View>
+
+
                 {/* Fingerprint Login */}
                 <View style={[styles.biometricContainer, styles.fingerprintContainer]}>
                   <View style={[styles.biometricIcon, styles.fingerprintIcon]}>
                     <Text style={styles.iconEmoji}>
-                      <Image
-                        source={require('@/assets/images/fingerprint.png')}
-                        style={styles.logoImage}
-                        resizeMode="contain"
-                      />
+                      <Image source={require('@/assets/images/fingerprint.png')} style={styles.logoImage} resizeMode="contain" />
                     </Text>
                   </View>
                   <Text style={styles.biometricTitle}>Use Your Fingerprint</Text>
@@ -683,19 +758,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                     Quick and secure - just touch your device's fingerprint sensor
                   </Text>
                   <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      styles.fingerprintButton,
-                      isLoading && styles.disabledButton,
-                    ]}
+                    style={[styles.primaryButton, styles.fingerprintButton, isLoading && styles.disabledButton]}
                     onPress={handleBiometricLogin}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator color="#ffffff" size="small" />
-                    ) : (
-                      <Text style={styles.buttonText}>Sign In with Fingerprint</Text>
-                    )}
+                    {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.buttonText}>Sign In with Fingerprint</Text>}
                   </TouchableOpacity>
                 </View>
 
@@ -703,41 +770,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 <View style={[styles.biometricContainer, styles.faceContainer]}>
                   <View style={[styles.biometricIcon, styles.faceIcon]}>
                     <Text style={styles.iconEmoji}>
-                      <Image
-                        source={require('@/assets/images/face-recognition.png')}
-                        style={styles.logoImage}
-                        resizeMode="contain"
-                      />
+                      <Image source={require('@/assets/images/face-recognition.png')} style={styles.logoImage} resizeMode="contain" />
                     </Text>
                   </View>
                   <Text style={styles.biometricTitle}>Use Face Recognition</Text>
-                  <Text style={styles.biometricDescription}>
-                    Look at your device camera to sign in automatically
-                  </Text>
+                  <Text style={styles.biometricDescription}>Look at your device camera to sign in automatically</Text>
                   <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      styles.faceButton,
-                      isLoading && styles.disabledButton,
-                    ]}
+                    style={[styles.primaryButton, styles.faceButton, isLoading && styles.disabledButton]}
                     onPress={handleBiometricLogin}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator color="#ffffff" size="small" />
-                    ) : (
-                      <Text style={styles.buttonText}>Sign In with Face</Text>
-                    )}
+                    {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.buttonText}>Sign In with Face</Text>}
                   </TouchableOpacity>
                 </View>
 
                 {/* New User Section */}
                 <View style={styles.newUserContainer}>
                   <Text style={styles.newUserText}>New to LiveWell?</Text>
-                  <TouchableOpacity
-                    style={[styles.primaryButton, styles.secondaryButton]}
-                    onPress={() => setCurrentStep('signup')}
-                  >
+                  <TouchableOpacity style={[styles.primaryButton, styles.secondaryButton]} onPress={() => setCurrentStep('signup')}>
                     <Text style={styles.buttonText}>Create Your Free Account</Text>
                   </TouchableOpacity>
                 </View>
@@ -748,9 +798,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             {currentStep === 'signup' && (
               <View>
                 <Text style={styles.sectionTitle}>Create Your Account</Text>
-                <Text style={styles.description}>
-                  Welcome to LiveWell! Please fill in your details to get started.
-                </Text>
+                <Text style={styles.description}>Welcome to LiveWell! Please fill in your details to get started.</Text>
 
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Full Name *</Text>
@@ -827,25 +875,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 </View>
 
                 <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    styles.secondaryButton,
-                    isLoading && styles.disabledButton,
-                  ]}
+                  style={[styles.primaryButton, styles.secondaryButton, isLoading && styles.disabledButton]}
                   onPress={handleCreateAccount}
                   disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <Text style={styles.buttonText}>Create My LiveWell Account</Text>
-                  )}
+                  {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.buttonText}>Create My LiveWell Account</Text>}
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.primaryButton, styles.backButton]}
-                  onPress={() => setCurrentStep('login')}
-                >
+                <TouchableOpacity style={[styles.primaryButton, styles.backButton]} onPress={() => setCurrentStep('login')}>
                   <Text style={styles.buttonText}>Already have an account? Sign In</Text>
                 </TouchableOpacity>
               </View>
@@ -872,25 +909,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                     </View>
 
                     <TouchableOpacity
-                      style={[
-                        styles.primaryButton,
-                        styles.fingerprintButton,
-                        isLoading && styles.disabledButton,
-                      ]}
+                      style={[styles.primaryButton, styles.fingerprintButton, isLoading && styles.disabledButton]}
                       onPress={handleSetupBiometric}
                       disabled={isLoading}
                     >
-                      {isLoading ? (
-                        <ActivityIndicator color="#ffffff" size="small" />
-                      ) : (
-                        <Text style={styles.buttonText}>Set Up Biometric Sign-In</Text>
-                      )}
+                      {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.buttonText}>Set Up Biometric Sign-In</Text>}
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.primaryButton, styles.backButton]}
-                      onPress={handleCompleteSignup}
-                    >
+                    <TouchableOpacity style={[styles.primaryButton, styles.backButton]} onPress={handleCompleteSignup}>
                       <Text style={styles.buttonText}>Skip for Now</Text>
                     </TouchableOpacity>
                   </View>
@@ -899,7 +925,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 {setupStep === 'success' && (
                   <View>
                     <Text style={styles.sectionTitle}>All Set!</Text>
-                    
+
                     <View style={styles.successContainer}>
                       <View style={styles.successIcon}>
                         <Text style={styles.successIconEmoji}>✅</Text>
@@ -909,10 +935,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                       </Text>
                     </View>
 
-                    <TouchableOpacity
-                      style={[styles.primaryButton, styles.fingerprintButton]}
-                      onPress={handleCompleteSignup}
-                    >
+                    <TouchableOpacity style={[styles.primaryButton, styles.fingerprintButton]} onPress={handleCompleteSignup}>
                       <Text style={styles.buttonText}>Start Using LiveWell</Text>
                     </TouchableOpacity>
                   </View>
@@ -927,8 +950,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <View style={styles.helpContainer}>
               <Text style={styles.helpTitle}>Need Help?</Text>
               <Text style={styles.helpText}>
-                Call us at <Text style={{ fontWeight: '700' }}>1800 LIVEWELL</Text>{'\n'}
-                Monday to Friday, 9 AM to 5 PM
+                Call us at <Text style={{ fontWeight: '700' }}>1800 LIVEWELL</Text>
+                {'\n'}Monday to Friday, 9 AM to 5 PM
               </Text>
             </View>
           </View>

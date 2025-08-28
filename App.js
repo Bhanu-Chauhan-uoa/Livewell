@@ -1,4 +1,4 @@
-// App.js - Updated to properly handle database user names
+// App.js - Updated to handle frailty assessment
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import LoginScreen from './components/LoginScreen';
@@ -12,14 +12,19 @@ export default function App() {
     console.log('Login successful:', userData);
     
     // Properly extract the user's name from database response
-    // The database likely returns 'fullName' but HomeScreen expects 'name'
     const userName = userData.fullName || userData.name || userData.email?.split('@')[0] || 'User';
+    
+    // Check if user has a frailty score from the database
+    const frailtyScore = userData.profile?.frailtyScore || userData.frailtyScore || null;
     
     // Merge login data with default health profile structure
     const completeUserData = {
       // Basic info from login - ensure name is properly set
       ...userData,
-      name: userName, // This ensures HomeScreen gets the correct name
+      name: userName,
+      
+      // Set frailty score (null if not available - this will trigger the assessment)
+      frailtyScore: frailtyScore,
       
       // Health profile defaults (if not already present)
       age: userData.age || '',
@@ -32,10 +37,16 @@ export default function App() {
       emergencyContact: userData.emergencyContact || { name: '', phone: '' },
       dietaryRestrictions: userData.dietaryRestrictions || [],
       fallHistory: userData.fallHistory || 'no',
-      livingSituation: userData.livingSituation || 'independent'
+      livingSituation: userData.livingSituation || 'independent',
+      
+      // Default dashboard stats if not available
+      weeklyGoals: userData.weeklyGoals || 5,
+      completedGoals: userData.completedGoals || 0,
+      streakDays: userData.streakDays || 0,
     };
     
-    console.log('Setting user with name:', completeUserData.name); // Debug log
+    console.log('Setting user with name:', completeUserData.name);
+    console.log('Frailty score available:', completeUserData.frailtyScore !== null);
     
     setUser(completeUserData);
     setIsLoggedIn(true);
@@ -47,12 +58,39 @@ export default function App() {
     setIsLoggedIn(false);
   };
 
-  const handleUpdateUser = (updatedUserData) => {
+  const handleUpdateUser = async (updatedUserData) => {
     console.log('Updating user profile:', updatedUserData);
-    setUser(updatedUserData);
     
-    // Here you could also save to a database or local storage
-    // For now, we'll just update the state
+    // If this is a frailty assessment update, you might want to save it to the database
+    if (updatedUserData.frailtyScore && !user.frailtyScore) {
+      try {
+        // Save frailty score to database
+        const response = await fetch('https://mws-apim-test-01.azure-api.net/v1/user/frailty', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
+            'Authorization': `Bearer ${user.token}`, // If you store the JWT token
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            frailtyScore: updatedUserData.frailtyScore,
+            frailtyCategory: updatedUserData.frailtyCategory,
+            assessmentDate: updatedUserData.lastAssessment,
+          }),
+        });
+
+        if (response.ok) {
+          console.log('Frailty score saved to database');
+        } else {
+          console.error('Failed to save frailty score to database');
+        }
+      } catch (error) {
+        console.error('Error saving frailty score:', error);
+      }
+    }
+    
+    setUser(updatedUserData);
   };
 
   return (

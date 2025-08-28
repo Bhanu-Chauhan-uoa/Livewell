@@ -1,5 +1,3 @@
-// screens/HomeScreen.js - Complete version with hamburger navigation
-// Add these imports to your HomeScreen.js at the top:
 import { useState } from 'react';
 import {
   Alert,
@@ -14,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import FrailtyAssessmentScreen from './FrailtyAssessment';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +20,7 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
   const [activeSection, setActiveSection] = useState('home');
   const [fontSize, setFontSize] = useState('normal');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showFrailtyAssessment, setShowFrailtyAssessment] = useState(false);
 
   const getFontSize = (baseSize) => {
     const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
@@ -52,6 +52,44 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
     { id: 'profile', label: 'Profile', icon: '👤' },
     { id: 'help', label: 'Help', icon: '❓' }
   ];
+
+  const handleFrailtyAssessmentComplete = (results) => {
+    console.log('Frailty assessment completed:', results);
+    
+    // Update user data with the new frailty score
+    const updatedUser = {
+      ...user,
+      frailtyScore: results.frailtyScore,
+      frailtyCategory: results.frailtyCategory,
+      lastAssessment: results.completedAt,
+    };
+    
+    // Update user in parent component
+    if (onUpdateUser) {
+      onUpdateUser(updatedUser);
+    }
+    
+    // Close the assessment screen
+    setShowFrailtyAssessment(false);
+    
+    // Show success message
+    if (typeof window !== 'undefined') {
+      window.alert(`Assessment completed! Your wellness score is ${results.frailtyScore}/5.0`);
+    }
+  };
+
+  // Update your return statement at the bottom of the HomeScreen component:
+  if (showFrailtyAssessment) {
+    return (
+      <FrailtyAssessmentScreen
+        user={user}
+        fontSize={fontSize}
+        onComplete={handleFrailtyAssessmentComplete}
+        onCancel={() => setShowFrailtyAssessment(false)}
+      />
+    );
+  }
+
 
   const handleMenuItemPress = (sectionId) => {
     setActiveSection(sectionId);
@@ -627,6 +665,19 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
       borderWidth: 2,
       borderColor: '#e9ecef',
     },
+    retakeButton: {
+      backgroundColor: '#8b5cf6',
+      borderRadius: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      marginTop: 8,
+      alignItems: 'center',
+    },
+    retakeButtonText: {
+      color: '#ffffff',
+      fontSize: getFontSize(10),
+      fontWeight: '600',
+    },
   });
 
   const FontSizeButtons = () => (
@@ -713,12 +764,19 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
       </Text>
 
       <View style={styles.statsContainer}>
+        {/* Wellness Score Card with Retake Option */}
         <View style={styles.statCard}>
           <View style={[styles.statIcon, { backgroundColor: '#22c55e20' }]}>
             <Text style={styles.statIconEmoji}>⭐</Text>
           </View>
           <Text style={styles.statNumber}>{user.frailtyScore}</Text>
           <Text style={styles.statLabel}>Wellness Score</Text>
+          <TouchableOpacity 
+            style={styles.retakeButton}
+            onPress={() => setShowFrailtyAssessment(true)}
+          >
+            <Text style={styles.retakeButtonText}>Retake Assessment</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.statCard}>

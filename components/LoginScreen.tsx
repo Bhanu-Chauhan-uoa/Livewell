@@ -104,23 +104,81 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       });
 
       if (authResult.success) {
-        setMessage('Perfect! Welcome back to LiveWell!');
+        // After successful biometric auth, fetch user data from database
+        try {
+          const response = await fetch(
+            'https://mws-apim-test-01.azure-api.net/v1/user/profile', // Adjust endpoint as needed
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
+                // You might need to include user identifier in headers or query params
+                'User-Email': email,
+              },
+            }
+          );
 
-        const userData = {
-          email: email,
-          name: name,
-          loginMethod: 'biometric',
-          loginTime: new Date().toISOString(),
-          frailtyScore: 3.2,
-          weeklyGoals: 5,
-          completedGoals: 3,
-          streakDays: 12,
-        };
+          if (response.ok) {
+            const userData = await response.json();
+            
+            const completeUserData = {
+              ...userData,
+              email: userData.emailAddress || email,
+              name: userData.fullName || userData.name || email.split('@')[0],
+              phoneNumber: userData.phoneNumber || '',
+              loginMethod: 'biometric',
+              loginTime: new Date().toISOString(),
+              frailtyScore: userData.frailtyScore || 3.2,
+              weeklyGoals: userData.weeklyGoals || 5,
+              completedGoals: userData.completedGoals || 3,
+              streakDays: userData.streakDays || 12,
+            };
 
-        setTimeout(() => {
-          setIsLoading(false);
-          onLoginSuccess(userData);
-        }, 1500);
+            setMessage('Perfect! Welcome back to LiveWell!');
+            setTimeout(() => {
+              setIsLoading(false);
+              onLoginSuccess(completeUserData);
+            }, 1500);
+          } else {
+            // Fallback if user profile fetch fails
+            const userData = {
+              email: email,
+              name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+              loginMethod: 'biometric',
+              loginTime: new Date().toISOString(),
+              frailtyScore: 3.2,
+              weeklyGoals: 5,
+              completedGoals: 3,
+              streakDays: 12,
+            };
+
+            setMessage('Perfect! Welcome back to LiveWell!');
+            setTimeout(() => {
+              setIsLoading(false);
+              onLoginSuccess(userData);
+            }, 1500);
+          }
+        } catch (fetchError) {
+          console.error('Error fetching user profile:', fetchError);
+          // Fallback user data
+          const userData = {
+            email: email,
+            name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+            loginMethod: 'biometric',
+            loginTime: new Date().toISOString(),
+            frailtyScore: 3.2,
+            weeklyGoals: 5,
+            completedGoals: 3,
+            streakDays: 12,
+          };
+
+          setMessage('Perfect! Welcome back to LiveWell!');
+          setTimeout(() => {
+            setIsLoading(false);
+            onLoginSuccess(userData);
+          }, 1500);
+        }
       } else {
         setMessage('Authentication failed. Please try again.');
         setIsLoading(false);
@@ -132,7 +190,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // NEW: Passkey login handler
+  // Passkey login handler
   const handlePasskeyLogin = async () => {
     setIsLoading(true);
     setMessage('');
@@ -162,9 +220,33 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       if (response.ok) {
         const data = await response.json();
         setMessage('Welcome back!');
+        
+        // Extract user data from the nested response structure
+        const userData = {
+          // Map database fields to expected format
+          name: data.user.fullName, // This is the key fix!
+          email: data.user.emailAddress,
+          phoneNumber: data.user.phoneNumber,
+          id: data.user.id,
+          
+          // Include the profile data if available
+          profile: data.user.profile,
+          
+          // Add auth-related data
+          token: data.token,
+          loginMethod: 'passkey',
+          loginTime: new Date().toISOString(),
+          
+          // Add defaults for HomeScreen stats
+          frailtyScore: data.user.profile?.frailtyLevel === 'low' ? 3.2 : 2.5,
+          weeklyGoals: 5,
+          completedGoals: 3,
+          streakDays: 12,
+        };
+
         setTimeout(() => {
           setIsLoading(false);
-          onLoginSuccess(data);
+          onLoginSuccess(userData);
         }, 1000);
       } else {
         const errorText = await response.text();

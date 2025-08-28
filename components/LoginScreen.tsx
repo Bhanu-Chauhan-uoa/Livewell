@@ -564,6 +564,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       alignItems: 'center',
       minHeight: 60,
       justifyContent: 'center',
+      marginBottom: 16,
     },
     fingerprintButton: {
       backgroundColor: '#22c55e',
@@ -701,7 +702,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     },
     backButton: {
       backgroundColor: '#6b7280',
-      marginBottom: 16,
+      marginBottom: 0,
     },
   });
 
@@ -947,15 +948,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   />
                 </View>
 
-                <View style={styles.benefitsContainer}>
-                  <Text style={styles.benefitsTitle}>What you'll get with LiveWell:</Text>
-                  <Text style={styles.benefitItem}>• Personalized health tracking</Text>
-                  <Text style={styles.benefitItem}>• Secure biometric sign-in</Text>
-                  <Text style={styles.benefitItem}>• Daily wellness goals</Text>
-                  <Text style={styles.benefitItem}>• Expert health guidance</Text>
-                  <Text style={styles.benefitItem}>• Community activities near you</Text>
-                </View>
-
                 <TouchableOpacity
                   style={[styles.primaryButton, styles.secondaryButton, isLoading && styles.disabledButton]}
                   onPress={handleCreateAccount}
@@ -964,7 +956,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   {isLoading ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.buttonText}>Create My LiveWell Account</Text>}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.primaryButton, styles.backButton]} onPress={() => setCurrentStep('login')}>
+                <TouchableOpacity 
+                  style={[styles.primaryButton, styles.backButton]} 
+                  onPress={() => setCurrentStep('login')}
+                >
                   <Text style={styles.buttonText}>Already have an account? Sign In</Text>
                 </TouchableOpacity>
               </View>

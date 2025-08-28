@@ -1,4 +1,4 @@
-// screens/ProfileScreen.js
+// screens/ProfileScreen.js - Corrected version
 import { useState } from 'react';
 import {
     Alert,
@@ -14,19 +14,8 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
-  const [fontSize, setFontSize] = useState('normal');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(user.name || '');
-  const [editedEmail, setEditedEmail] = useState(user.email || '');
-  const [editedPhone, setEditedPhone] = useState(user.phoneNumber || '');
-
-  const getFontSize = (baseSize) => {
-    const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
-    return baseSize * multiplier;
-  };
-
-  const handleSave = () => {
+const handleSave = () => {
+    console.log('SAVE BUTTON CLICKED!');
     if (!editedName.trim() || !editedEmail.trim()) {
       Alert.alert('Error', 'Please fill in your name and email address.');
       return;
@@ -38,8 +27,9 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
       email: editedEmail.trim(),
       phoneNumber: editedPhone.trim(),
     };
-
+    
     if (onUpdateUser) {
+        console.log('Current user:', user)
       onUpdateUser(updatedUser);
     }
 
@@ -52,6 +42,18 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
     setEditedEmail(user.email || '');
     setEditedPhone(user.phoneNumber || '');
     setIsEditing(false);
+  };
+
+const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
+  const [fontSize, setFontSize] = useState('normal');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(user.name || '');
+  const [editedEmail, setEditedEmail] = useState(user.email || '');
+  const [editedPhone, setEditedPhone] = useState(user.phoneNumber || '');
+
+  const getFontSize = (baseSize) => {
+    const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
+    return baseSize * multiplier;
   };
 
   const handleLogout = () => {
@@ -237,6 +239,7 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
     },
     inputContainer: {
       marginBottom: 20,
+      width: '100%',
     },
     inputLabel: {
       fontSize: getFontSize(16),
@@ -258,6 +261,7 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
       flexDirection: 'row',
       gap: 12,
       marginTop: 16,
+      width: '100%',
     },
     saveButton: {
       flex: 1,
@@ -326,6 +330,11 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
       marginBottom: 16,
       borderWidth: 2,
       borderColor: '#e9ecef',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     infoTitle: {
       fontSize: getFontSize(18),
@@ -513,7 +522,7 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
                     style={styles.saveButton}
                     onPress={handleSave}
                   >
-                    <Text style={styles.buttonText}>Save Changes</Text>
+                    <Text style={styles.buttonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -554,7 +563,8 @@ const ProfileScreen = ({ user, onUpdateUser, onLogout, onBack }) => {
               <Text style={styles.infoLabel}>Sign In Method</Text>
               <Text style={styles.infoValue}>
                 {user.loginMethod === 'biometric' ? 'Biometric Authentication' : 
-                 user.loginMethod === 'new_account' ? 'New Account' : 'Standard Login'}
+                 user.loginMethod === 'new_account' ? 'New Account' : 
+                 user.loginMethod === 'passkey' ? 'Passkey Login' : 'Standard Login'}
               </Text>
             </View>
           </View>

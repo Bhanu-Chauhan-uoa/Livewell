@@ -21,6 +21,23 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
   const [fontSize, setFontSize] = useState('normal');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showFrailtyAssessment, setShowFrailtyAssessment] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({
+    name: user.name || '',
+    email: user.email || '',
+    phoneNumber: user.phoneNumber || '',
+    age: user.age || '',
+    height: user.height || '',
+    weight: user.weight || '',
+    medicalConditions: user.medicalConditions || [],
+    medications: user.medications || [],
+    exerciseLevel: user.exerciseLevel || 'light',
+    mobilityAids: user.mobilityAids || [],
+    emergencyContact: user.emergencyContact || { name: '', phone: '' },
+    dietaryRestrictions: user.dietaryRestrictions || [],
+    fallHistory: user.fallHistory || 'no',
+    livingSituation: user.livingSituation || 'independent'
+  });
 
   const getFontSize = (baseSize) => {
     const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
@@ -668,14 +685,14 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
     retakeButton: {
       backgroundColor: '#8b5cf6',
       borderRadius: 6,
-      paddingVertical: 6,
-      paddingHorizontal: 10,
+      paddingVertical: 20,
+      paddingHorizontal: 15,
       marginTop: 8,
       alignItems: 'center',
     },
     retakeButtonText: {
       color: '#ffffff',
-      fontSize: getFontSize(10),
+      fontSize: getFontSize(20),
       fontWeight: '600',
     },
   });
@@ -771,6 +788,8 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
           </View>
           <Text style={styles.statNumber}>{user.frailtyScore}</Text>
           <Text style={styles.statLabel}>Wellness Score</Text>
+        </View>
+        <View style={styles.statCard}>
           <TouchableOpacity 
             style={styles.retakeButton}
             onPress={() => setShowFrailtyAssessment(true)}
@@ -778,7 +797,6 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
             <Text style={styles.retakeButtonText}>Retake Assessment</Text>
           </TouchableOpacity>
         </View>
-
         <View style={styles.statCard}>
           <View style={[styles.statIcon, { backgroundColor: '#3b82f620' }]}>
             <Text style={styles.statIconEmoji}>🎯</Text>
@@ -908,24 +926,6 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
   // Replace the renderProfileContent function with this:
 
   const renderProfileContent = () => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedProfile, setEditedProfile] = useState({
-      name: user.name || '',
-      email: user.email || '',
-      phoneNumber: user.phoneNumber || '',
-      age: user.age || '',
-      height: user.height || '',
-      weight: user.weight || '',
-      medicalConditions: user.medicalConditions || [],
-      medications: user.medications || [],
-      exerciseLevel: user.exerciseLevel || 'light',
-      mobilityAids: user.mobilityAids || [],
-      emergencyContact: user.emergencyContact || { name: '', phone: '' },
-      dietaryRestrictions: user.dietaryRestrictions || [],
-      fallHistory: user.fallHistory || 'no',
-      livingSituation: user.livingSituation || 'independent'
-    });
-
     const handleSave = () => {
       if (!editedProfile.name.trim() || !editedProfile.email.trim()) {
         if (typeof window !== 'undefined') {
@@ -1139,7 +1139,7 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
                 style={[styles.joinButton, { flex: 1 }]}
                 onPress={handleSave}
               >
-                <Text style={styles.joinButtonText}>Save Changes</Text>
+                <Text style={styles.joinButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           )}

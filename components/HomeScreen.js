@@ -48,7 +48,7 @@ const HomeScreen = ({ user, onLogout, onUpdateUser }) => {
   const navigationItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
     { id: 'health', label: 'Health Tips', icon: '💡' },
-    { id: 'events', label: 'Activities', icon: '📅' },
+    { id: 'events', label: 'Activities', icon: '🚶‍♀️' },
     { id: 'profile', label: 'Profile', icon: '👤' },
     { id: 'help', label: 'Help', icon: '❓' }
   ];

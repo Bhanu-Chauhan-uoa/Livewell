@@ -505,6 +505,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       backgroundColor: '#ffffff',
       minHeight: 56,
     },
+    textInputPasskey:{
+      borderWidth: 3,
+      borderColor: '#e9ecef',
+      borderRadius: 12,
+      padding: 16,
+      fontSize: getFontSize(16),
+      color: '#1a1a1a',
+      backgroundColor: '#ffffff',
+      minHeight: 56,
+      marginBottom:15,
+    },
     biometricContainer: {
       borderRadius: 16,
       padding: 24,
@@ -704,6 +715,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       backgroundColor: '#6b7280',
       marginBottom: 0,
     },
+    logo: {
+      backgroundColor: 'rgb(73 180 255)',
+      borderRadius: 50,
+      padding: 12,
+      marginRight: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 
   const FontSizeButtons = () => {
@@ -759,7 +778,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.titleContainer}>
-                <Image source={require('@/assets/images/Logo.png')} style={styles.heartIcon} resizeMode="contain" />
+                <View style={styles.logo}>
+                <Image
+                  source={require('../assets/images/Logo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </View>
                 <Text style={styles.title}>LiveWell</Text>
               </View>
               <Text style={styles.subtitle}>Secure & Simple Sign In</Text>
@@ -802,7 +827,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     </Text>
 
     <TextInput
-      style={styles.textInput}
+      style={styles.textInputPasskey}
       value={passkey}
       onChangeText={setPasskey}
       placeholder="Enter your passkey"

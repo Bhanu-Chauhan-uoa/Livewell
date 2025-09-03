@@ -36,9 +36,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [message, setMessage] = useState('');
   const [setupStep, setSetupStep] = useState<SetupStep>('email');
 
-  // Prefer EXPO env var; falls back to placeholder string for dev
-  const subscriptionKey =
-    (process.env.EXPO_PUBLIC_APIM_KEY as string) || '8d7144a492ab484b982f92b12525ec6f';
+  const subscriptionKey = process.env.EXPO_PUBLIC_APIM_KEY;
+
+  if (!subscriptionKey) {
+    console.error('EXPO_PUBLIC_APIM_KEY is not set in environment variables');
+  }
 
   const getFontSize = (baseSize: number): number => {
     const multiplier = fontSize === 'extra-large' ? 1.4 : fontSize === 'large' ? 1.2 : 1;
@@ -208,7 +210,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
+            'Ocp-Apim-Subscription-Key': subscriptionKey,
           },
           body: JSON.stringify({
             identifier: email,

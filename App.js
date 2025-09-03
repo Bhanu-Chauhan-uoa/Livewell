@@ -69,7 +69,7 @@ export default function App() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Ocp-Apim-Subscription-Key': '8d7144a492ab484b982f92b12525ec6f',
+            'Ocp-Apim-Subscription-Key': process.env.EXPO_PUBLIC_APIM_KEY,           
             'Authorization': `Bearer ${user.token}`, // If you store the JWT token
           },
           body: JSON.stringify({
